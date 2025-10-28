@@ -1,0 +1,7 @@
+# VERSION 1.3.0
+
+- implement a protobuf-based protocol, replacing the JSON-based protocol
+- fix sample output, now reaching up to 500k Hz stable sample rate
+- fix an issue where the calibration was affected by external analog signals when setting a circuit
+
+Note: This version breaks compatibility with the lucipy. It is recommended to use the pybrid client instead. Please refer to the newest version of the LUCIDAC manual for instructions on how to use the device.
