@@ -24,18 +24,35 @@ c.connect(cos, sin, weight = -omega)    # Connect cosine to sine integrator
 c.measure(sin, adc_channel=0)           # Connect integrators to ADC
 c.measure(cos, adc_channel=1)           # to sample data
 
-c.probe(sin, front_port=0)
-c.probe(cos, front_port=1)
+# output signals on ACL_OUT - indexec from left starting from 0 through `front_port`
+c.probe(sin, front_port=0, weight=0.2)
+c.probe(cos, front_port=1, weight=0.5)
 
 ###
-# Setup the front panel:
-# - signal generator
+# Setup the front panel: signal generator & LEDs
+# - output either a sine & rect OR triangle (on SINE port)
+# - output two constant signals at AUX port
+###
+
+# sets frequency of sine, rect, triangle in Hza
 c.front_panel.set_frequency(1000)
+
+# enables sine wave with amplitude (0 - 1) and offset(0 - 0.5)
 c.front_panel.set_sine(amplitude=0.6, offset=0.2)
+
+# set rectagle signal that switches between low and high voltage
 c.front_panel.set_rect(low=-0.2, high=0.7)
+
+# set triangle signal with amplitude = 1
 c.front_panel.set_triangle(offset=0.2)
+
+# set constant values for AUX ports
 c.front_panel.set_aux(0.3, -0.8)
 
+# note: the generator allows onlu outputting sine & rect _OR_ triangle at each iime
+# plus the two AUX signals
+
+# set 8 LED states on frontpanel from left to right
 c.front_panel.set_leds([True, True, False, True, False, True, True, True])
 
 
