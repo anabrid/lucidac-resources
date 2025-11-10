@@ -1,0 +1,4 @@
+# VERSION 2.0.3
+
+- fix an issue with the signal generator's ranges for amplitude and offset
+- adapt front panel config in pybrid and firmware
