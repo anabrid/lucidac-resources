@@ -1,0 +1,3 @@
+# VERSION 2.0.4
+
+- fix a regression where the ACL_SELECT values were reset in several cases
