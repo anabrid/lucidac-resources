@@ -1,0 +1,7 @@
+# VERISON 2.2.0
+
+- Seperate out the calibration process in its own command, enabling repeated runs without calibraion.
+- Harmonizing handling of entity addresses between pybrid and the firmware.
+- Various protocol updates and bugfixes.
+
+Note that this firmware requires at least version 0.11.7 of `pybrid-computing`.
