@@ -10,7 +10,7 @@ Reference: Analog Paradigm Application Note 28
 https://analogparadigm.com/downloads/alpaca_28.pdf
 """
 
-from pybrid.lucidac.lucipy import Circuit, LUCIDAC, time_series
+from pybrid.lucipy import Circuit, LUCIDAC, time_series
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -19,13 +19,22 @@ import numpy as np
 # Create a Hindmarsh-Rose neuron model circuit in lucipy-syntax
 ###
 
-hr      = Circuit()                     # Create a circuit
+###
+# Auto-detect LUCIDAC-device (empty constructor) or:
+# - set environment variable LUCIDAC_ENDPOINT to a connection string
+# - pass the connection string directly
+#
+# where the connection string is `tcp://<LUCIDAC IP or hostname>:5732`.
+###
+luci    = LUCIDAC()
+
+hr      = luci.create_circuit()         # Create a circuit
 
 x   = hr.int(ic = +1.)                  # Integrators with initial conditions
 y   = hr.int(ic = -1.)
 z   = hr.int(ic = +1, slow = True)      # Slow dynamics for adaptation
-x2  = hr.mul(1)                         # Multipliers for nonlinear terms
-x3  = hr.mul(2)
+x2  = hr.mul()                         # Multipliers for nonlinear terms
+x3  = hr.mul()
 c   = hr.const()                        # Constant source
 
 hr.connect( x, x2.a)                    # Compute x^2
@@ -48,20 +57,9 @@ hr.connect( x, z, weight = -0.4)        # Slow adaptation current
 hr.connect( c, z, weight = +0.32)
 hr.connect( z, z, weight = +0.1)
 
-hr.measure(x, adc_channel=0)            # Connect integrators to ADC
-hr.measure(y, adc_channel=1)            # to sample data
-hr.measure(z, adc_channel=2)
-
-###
-# Auto-detect LUCIDAC-device (empty constructor) or:
-# - set environment variable LUCIDAC_ENDPOINT to a connection string
-# - pass the connection string directly
-#
-# where the connection string is `tcp://<LUCIDAC IP or hostname>:5732`.
-###
-luci    = LUCIDAC()
-
-luci.set_circuit(hr)                    # Assign circuit
+hr.probe(x, adc_channel=0)              # Connect integrators to ADC
+hr.probe(y, adc_channel=1)              # to sample data
+hr.probe(z, adc_channel=2)
 
 ###
 # Settings for sampling and circuit execution
@@ -80,11 +78,9 @@ run = luci.run()
 ###
 # Receive sample data and plot
 ###
-for adc_key, values in run.data.items():
-    if adc_key[1] != "ADC0":
-        continue
+for ix, values in enumerate(run.data):
     x = time_series(sample_rate, len(values))
-    plt.plot(x, values if adc_key[1] != "ADC0" else [-t for t in values], label=adc_key[-1])
+    plt.plot(x, [-t for t in values], label=f"Probe {ix}")
 plt.xlabel("time / s")
 plt.legend()
 plt.grid()

@@ -1,7 +1,7 @@
 # Copyright (c) 2022-2025 anabrid GmbH
 # Contact: https://www.anabrid.com/licensing/
 # SPDX-License-Identifier: MIT OR GPL-2.0-or-later
-from pybrid.lucidac.lucipy import Circuit, LUCIDAC, time_series
+from pybrid.lucipy import Circuit, LUCIDAC, time_series
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -9,14 +9,23 @@ import numpy as np
 # Create a Van der Pol oscillator circuit in lucipy-syntax
 ###
 
-vdp = Circuit()                         # Create a circuit
+###
+# Auto-detect LUCIDAC-device (empty constructor) or:
+# - set environment variable LUCIDAC_ENDPOINT to a connection string
+# - pass the connection string directly
+#
+# where the connection string is `tcp://<LUCIDAC IP or hostname>:5732`.
+###
+luci    = LUCIDAC()
+
+vdp = luci.create_circuit()             # Create a circuit
 
 eta = 4                                 # Nonlinearity parameter
 
 mdy = vdp.int()                         # Integrators
 y   = vdp.int(ic = 0.1)
-y2  = vdp.mul(1)                        # Multipliers for nonlinear terms
-fb  = vdp.mul(2)
+y2  = vdp.mul()                         # Multipliers for nonlinear terms
+fb  = vdp.mul()
 c   = vdp.const()                       # Constant source
 
 vdp.connect(fb, mdy, weight = -eta)
@@ -31,22 +40,14 @@ vdp.connect(y2,  fb.a, weight = -1)     # Build nonlinear feedback term
 vdp.connect(c,   fb.a, weight = 0.25)
 vdp.connect(mdy, fb.b)
 
-vdp.probe(mdy, front_port=0)            # Connect to front panel probes
-vdp.probe(y,   front_port=1)
+out0 = vdp.output(0)                    # Allocate output MCX plugs
+out1 = vdp.output(1)
 
-vdp.measure(mdy)                        # Connect to ADC to sample data
-vdp.measure(y)
+vdp.connect(mdy, out0)                  # Connect signals to front panel outputs
+vdp.connect(y,   out1)
 
-###
-# Auto-detect LUCIDAC-device (empty constructor) or:
-# - set environment variable LUCIDAC_ENDPOINT to a connection string
-# - pass the connection string directly
-#
-# where the connection string is `tcp://<LUCIDAC IP or hostname>:5732`.
-###
-luci    = LUCIDAC()
-
-luci.set_circuit(vdp)                   # Assign circuit
+vdp.probe(mdy)                          # Connect to ADC to sample data
+vdp.probe(y)
 
 ###
 # Settings for sampling and circuit execution
@@ -65,10 +66,8 @@ run = luci.run()
 ###
 # Receive sample data and plot
 ###
-for adc_key, values in run.data.items():
-    x = time_series(sample_rate, len(values))
-    plt.plot(x, values, label=adc_key[-1])
-plt.xlabel("time / s")
-plt.legend()
-plt.grid()
+ax = plt.figure().add_subplot()
+ax.plot(*np.array(run.data), ls="-", marker="+", markersize=1.5)
+ax.set_xlabel("X")
+ax.set_ylabel("Y")
 plt.show()

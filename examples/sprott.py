@@ -10,7 +10,7 @@ Reference: Analog Paradigm Application Note 31
 https://analogparadigm.com/downloads/alpaca_31.pdf
 """
 
-from pybrid.lucidac.lucipy import Circuit, LUCIDAC
+from pybrid.lucipy import Circuit, LUCIDAC
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -19,7 +19,16 @@ import numpy as np
 # Create a Sprott attractor circuit in lucipy-syntax
 ###
 
-sprott  = Circuit()                     # Create a circuit
+###
+# Auto-detect LUCIDAC-device (empty constructor) or:
+# - set environment variable LUCIDAC_ENDPOINT to a connection string
+# - pass the connection string directly
+#
+# where the connection string is `tcp://<LUCIDAC IP or hostname>:5732`.
+###
+luci    = LUCIDAC()
+
+sprott  = luci.create_circuit()         # Create a circuit
 
 scale = 0.7                             # Scaling factor
 
@@ -44,20 +53,9 @@ sprott.connect(my, mxy.b, weight = -1 * scale)
 sprott.connect(my, yz.a)                            # Compute yz
 sprott.connect(mz, yz.b)
 
-sprott.measure(mx, adc_channel=0)                   # Connect integrators to ADC
-sprott.measure(my, adc_channel=1)                   # to sample data
-sprott.measure(mz, adc_channel=2)
-
-###
-# Auto-detect LUCIDAC-device (empty constructor) or:
-# - set environment variable LUCIDAC_ENDPOINT to a connection string
-# - pass the connection string directly
-#
-# where the connection string is `tcp://<LUCIDAC IP or hostname>:5732`.
-###
-luci    = LUCIDAC()
-
-luci.set_circuit(sprott)                # Assign circuit
+sprott.probe(mx, adc_channel=0)                     # Connect integrators to ADC
+sprott.probe(my, adc_channel=1)                     # to sample data
+sprott.probe(mz, adc_channel=2)
 
 ###
 # Settings for sampling and circuit execution
@@ -76,10 +74,8 @@ run = luci.run()
 ###
 # Receive sample data and plot
 ###
-samples = list(run.data.values())
-
 ax = plt.figure().add_subplot(projection='3d')
-ax.plot(*np.array(samples), ls="-", marker="", markersize=1.5)
+ax.plot(*np.array(run.data), ls="-", marker="", markersize=1.5)
 ax.set_xlabel("X")
 ax.set_ylabel("Y")
 ax.set_zlabel("Z")

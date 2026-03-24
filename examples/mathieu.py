@@ -1,7 +1,7 @@
 # Copyright (c) 2022-2025 anabrid GmbH
 # Contact: https://www.anabrid.com/licensing/
 # SPDX-License-Identifier: MIT OR GPL-2.0-or-later
-from pybrid.lucidac.lucipy import Circuit, LUCIDAC, time_series
+from pybrid.lucipy import Circuit, LUCIDAC, time_series
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -10,7 +10,16 @@ import numpy as np
 # Create a Mathieu equation circuit in lucipy-syntax
 ###
 
-m   = Circuit()                         # Create a circuit
+###
+# Auto-detect LUCIDAC-device (empty constructor) or:
+# - set environment variable LUCIDAC_ENDPOINT to a connection string
+# - pass the connection string directly
+#
+# where the connection string is `tcp://<LUCIDAC IP or hostname>:5732`.
+###
+luci    = LUCIDAC()
+
+m   = luci.create_circuit()             # Create a circuit
 
 # First we need an amplitude stabilized cosine signal. Since we do not have
 # limiters at the moment, we use a van der Pol oscillator for that purpose.
@@ -54,18 +63,7 @@ m.connect(mdym, ym)
 m.connect(y, p.a)                       # Parametric excitation term
 m.connect(ym, p.b, weight = 2)
 
-m.measure(ym, adc_channel=0)            # Connect to ADC to sample data
-
-###
-# Auto-detect LUCIDAC-device (empty constructor) or:
-# - set environment variable LUCIDAC_ENDPOINT to a connection string
-# - pass the connection string directly
-#
-# where the connection string is `tcp://<LUCIDAC IP or hostname>:5732`.
-###
-luci    = LUCIDAC()
-
-luci.set_circuit(m)                     # Assign circuit
+m.probe(ym, adc_channel=0)              # Connect to ADC to sample data
 
 ###
 # Settings for sampling and circuit execution
@@ -84,9 +82,9 @@ run = luci.run()
 ###
 # Receive sample data and plot
 ###
-for adc_key, values in run.data.items():
+for ix, values in enumerate(run.data):
     x = time_series(sample_rate, len(values))
-    plt.plot(x, values, label=adc_key[-1])
+    plt.plot(x, values, label=f"Probe {ix}")
 plt.xlabel("time / s")
 plt.legend()
 plt.grid()

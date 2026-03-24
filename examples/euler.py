@@ -10,7 +10,7 @@ Reference: Analog Paradigm Application Note 33
 https://analogparadigm.com/downloads/alpaca_33.pdf
 """
 
-from pybrid.lucidac.lucipy import Circuit, LUCIDAC
+from pybrid.lucipy import Circuit, LUCIDAC
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -22,7 +22,16 @@ import numpy as np
 # Set to True to run the integrators "slower", i.e. setting k0=100
 use_slow = True
 
-e   = Circuit()                          # Create a circuit
+###
+# Auto-detect LUCIDAC-device (empty constructor) or:
+# - set environment variable LUCIDAC_ENDPOINT to a connection string
+# - pass the connection string directly
+#
+# where the connection string is `tcp://<LUCIDAC IP or hostname>:5732`.
+###
+luci    = LUCIDAC()
+
+e   = luci.create_circuit()             # Create a circuit
 
 ramp  = e.int(ic = 1, slow=use_slow)     # Integrator for a time linear ramp
 const = e.const()                        # Constant for the time linear ramp
@@ -52,19 +61,8 @@ e.connect(scm1, sci1, weight = -5.)
 e.connect(sci0, x, weight = 0.2)         # Compute the parameterized Euler
 e.connect(sci1, y, weight = 0.2)         # spiral.
 
-e.measure(x, adc_channel=0)              # Connect integrators to ADC
-e.measure(y, adc_channel=1)              # to sample data
-
-###
-# Auto-detect LUCIDAC-device (empty constructor) or:
-# - set environment variable LUCIDAC_ENDPOINT to a connection string
-# - pass the connection string directly
-#
-# where the connection string is `tcp://<LUCIDAC IP or hostname>:5732`.
-###
-luci    = LUCIDAC()
-
-luci.set_circuit(e)                     # Assign circuit
+e.probe(x, adc_channel=0)                # Connect integrators to ADC
+e.probe(y, adc_channel=1)                # to sample data
 
 ###
 # Settings for sampling and circuit execution
@@ -83,10 +81,8 @@ run = luci.run()
 ###
 # Receive sample data and plot
 ###
-samples = list(run.data.values())
-
 ax = plt.figure().add_subplot()
-ax.plot(*np.array(samples), ls="-", marker="+", markersize=1.5)
+ax.plot(*np.array(run.data), ls="-", marker="+", markersize=1.5)
 ax.set_xlabel("X")
 ax.set_ylabel("Y")
 plt.show()

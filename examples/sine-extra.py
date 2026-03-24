@@ -1,60 +1,18 @@
 # Copyright (c) 2022-2025 anabrid GmbH
 # Contact: https://www.anabrid.com/licensing/
 # SPDX-License-Identifier: MIT OR GPL-2.0-or-later
-from pybrid.lucidac.lucipy import Circuit, LUCIDAC, time_series
+from pybrid.lucipy import Circuit, LUCIDAC, time_series, WaveForm
 import matplotlib.pyplot as plt
 import numpy as np
 
 ###
 # Create a simple sine/cosine oscillator circuit in lucipy-syntax with some
-# additional goodies (LEDs, signal generator) showing the use of the pront panel
+# additional goodies (LEDs, signal generator) showing the use of the pront panel.
+#
+# For this to work, please:
+# - attach an oscilloscope to analog outputs A0, A1 and OP (trigger on OP)
+# - connect the Rect signal to analog in 2, the sine signal to analog in 3
 ###
-
-c   = Circuit()                         # Create a circuit
-
-ic_sin  = -1                            # Initial value for the sine
-omega   = .01 * (2.*np.pi)              # Oscillation frequency
-
-sin = c.int(ic = ic_sin)                # Integrators for sine and cosine
-cos = c.int()
-
-c.connect(sin, cos, weight = +omega)    # Connect sine to cosine integrator
-c.connect(cos, sin, weight = -omega)    # Connect cosine to sine integrator
-
-c.measure(sin, adc_channel=0)           # Connect integrators to ADC
-c.measure(cos, adc_channel=1)           # to sample data
-
-# output signals on ACL_OUT - indexec from left starting from 0 through `front_port`
-c.probe(sin, front_port=0, weight=0.2)
-c.probe(cos, front_port=1, weight=0.5)
-
-###
-# Setup the front panel: signal generator & LEDs
-# - output either a sine & rect OR triangle (on SINE port)
-# - output two constant signals at AUX port
-###
-
-# sets frequency of sine, rect, triangle in Hza
-c.front_panel.set_frequency(1000)
-
-# enables sine wave with amplitude (0 - 1) and offset(0 - 0.5)
-c.front_panel.set_sine(amplitude=0.6, offset=0.2)
-
-# set rectagle signal that switches between low and high voltage
-c.front_panel.set_rect(low=-0.2, high=0.7)
-
-# set triangle signal with amplitude = 1
-c.front_panel.set_triangle(offset=0.2)
-
-# set constant values for AUX ports
-c.front_panel.set_aux(0.3, -0.8)
-
-# note: the generator allows onlu outputting sine & rect _OR_ triangle at each iime
-# plus the two AUX signals
-
-# set 8 LED states on frontpanel from left to right
-c.front_panel.set_leds([True, True, False, True, False, True, True, True])
-
 
 ###
 # Auto-detect LUCIDAC-device (empty constructor) or:
@@ -65,7 +23,54 @@ c.front_panel.set_leds([True, True, False, True, False, True, True, True])
 ###
 luci    = LUCIDAC()
 
-luci.set_circuit(c)                     # Assign circuit
+c   = luci.create_circuit()             # Create a circuit
+
+ic_sin  = -1                            # Initial value for the sine
+omega   = .01 * (2.*np.pi)              # Oscillation frequency
+
+sin = c.int(ic = ic_sin)                # Integrators for sine and cosine
+cos = c.int()
+
+port0 = c.output(0)                     # Allocate output MCX plugs
+port1 = c.output(1)
+
+c.connect(sin, cos, weight = +omega)    # Connect sine to cosine integrator
+c.connect(cos, sin, weight = -omega)    # Connect cosine to sine integrator
+
+c.probe(sin, adc_channel=0)             # Connect integrators to ADC
+c.probe(cos, adc_channel=1)             # to sample data
+
+c.connect(sin, port0)                   # Connect signals to analog output as
+c.connect(cos, port1)                   # well
+
+# wire inputs through ID-paths in order to sample from them
+input2 = c.input(2)
+input3 = c.input(3)
+
+mul0 = c.mul()
+
+c.connect(input2, mul0.a)
+c.connect(input3, mul0.b)
+
+c.probe(mul0.a.id(), adc_channel=2)
+c.probe(mul0.b.id(), adc_channel=3)
+
+###
+# Setup the front panel:
+# - signal generator
+###
+sg = c.signal_generator()
+sg.wave_form = WaveForm.SINE_AND_SQUARE
+sg.frequency = 1000
+sg.amplitude = 0.6
+sg.offset = 0.2
+sg.square_voltage_low = -0.2
+sg.square_voltage_high = 0.7
+sg.dac_outputs = [0.3, -0.8]
+sg.sleep = False
+
+# Set LEDs (list of booleans)
+c.set_leds([True, True, False, True, False, True, True, True])
 
 ###
 # Settings for sampling and circuit execution
@@ -84,9 +89,9 @@ run = luci.run()
 ###
 # Receive sample data and plot
 ###
-for adc_key, values in run.data.items():
+for ix, values in enumerate(run.data):
     x = time_series(sample_rate, len(values))
-    plt.plot(x, values, label=adc_key[-1])
+    plt.plot(x, values, label=f"Probe {ix}")
 plt.xlabel("time / s")
 plt.legend()
 plt.grid()

@@ -2,7 +2,7 @@
 # Contact: https://www.anabrid.com/licensing/
 # SPDX-License-Identifier: MIT OR GPL-2.0-or-later
 
-from pybrid.lucidac.lucipy import Circuit, LUCIDAC
+from pybrid.lucipy import Circuit, LUCIDAC
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -10,7 +10,16 @@ import numpy as np
 # Create a Roessler attractor circuit in lucipy-syntax
 ###
 
-r   = Circuit()                         # Create a circuit
+###
+# Auto-detect LUCIDAC-device (empty constructor) or:
+# - set environment variable LUCIDAC_ENDPOINT to a connection string
+# - pass the connection string directly
+#
+# where the connection string is `tcp://<LUCIDAC IP or hostname>:5732`.
+###
+luci    = LUCIDAC()
+
+r   = luci.create_circuit()             # Create a circuit
 
 x   = r.int(ic = .0066)                 # Integrators with initial conditions
 y   = r.int()
@@ -33,20 +42,9 @@ r.connect(z, m.a, weight = -1)          # Compute nonlinear term
 r.connect(x, m.b)
 r.connect(c, m.b, weight = -0.3796)
 
-r.measure(x, adc_channel=0)             # Connect integrators to ADC
-r.measure(y, adc_channel=1)             # to sample data
-r.measure(z, adc_channel=2)
-
-###
-# Auto-detect LUCIDAC-device (empty constructor) or:
-# - set environment variable LUCIDAC_ENDPOINT to a connection string
-# - pass the connection string directly
-#
-# where the connection string is `tcp://<LUCIDAC IP or hostname>:5732`.
-###
-luci    = LUCIDAC()
-
-luci.set_circuit(r)                     # Assign circuit
+r.probe(x, adc_channel=0)               # Connect integrators to ADC
+r.probe(y, adc_channel=1)               # to sample data
+r.probe(z, adc_channel=2)
 
 ###
 # Settings for sampling and circuit execution
@@ -65,10 +63,8 @@ run = luci.run()
 ###
 # Receive sample data and plot
 ###
-samples = list(run.data.values())
-
 ax = plt.figure().add_subplot(projection='3d')
-ax.plot(*np.array(samples), ls="-", marker="+", markersize=1.5)
+ax.plot(*np.array(run.data), ls="-", marker="+", markersize=1.5)
 ax.set_xlabel("X")
 ax.set_ylabel("Y")
 ax.set_ylabel("Z")
