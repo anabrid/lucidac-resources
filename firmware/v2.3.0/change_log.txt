@@ -1,0 +1,7 @@
+# VERISON 2.3.0
+
+- fix overload handling: LED now correctly signals overload as long as a `reset()` command was issued in a `Session` (see: pybrid) before stating the run
+- add ping command (not to be confused with the TCP ping command!) that checks availability of the device and readyness of the firmware
+- improve calibration
+
+Note that this firmware requires at least version 0.12.5 of `pybrid-computing`.
